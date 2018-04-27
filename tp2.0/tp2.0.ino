@@ -14,11 +14,16 @@ Adafruit_DCMotor *motor2 = AFMS.getMotor(2);
 //Adafruit_DCMotor *motor4 = AFMS.getMotor(4);
 int numb = 0;
 int menu = 0;
+int calibragem = 0; //0 = n foi feito calibragem 1 = calibrou o branco 2 = calibrou o preto
+float rgbNovo[] = {0,0,0};
+float rgbBranco[] = {0,0,0};
+float rgbPreto[] = {0,0,0};
+
 #define MAXN 5
-#define LED1 25
-#define LED2 2
-#define LED3 3
-#define SENSOR 4
+#define LEDG 25
+#define LEDR 23
+#define LEDB 27
+#define SENSOR 12
 
 
 void setup() {
@@ -26,28 +31,66 @@ AFMS.begin(); // create with the default frequency 1.6KHz
  lcd.begin(16, 2);  
   lcd.setCursor(0,0);  
   lcd.print("BH Dynamics: ");
-  //pinMode(LED1,OUTPUT); //LED vermelho
-  //pinMode(LED2,OUTPUT); //LED verde
-  //pinMode(LED3,OUTPUT); //LED azul
-  //pinMode(SENSOR,INPUT);  //Sensor
+  pinMode(LEDR,OUTPUT); //LED vermelho
+  pinMode(LEDG,OUTPUT); //LED verde
+  pinMode(LEDB,OUTPUT); //LED azul
+  pinMode(SENSOR,INPUT);  //Sensor
+  digitalWrite(LEDR, HIGH);
+  digitalWrite(LEDG, HIGH);
+  digitalWrite(LEDB, HIGH);
 
     
 
 }
-//
-int ident_cor(){
-  int val = 0;
-  for(int i = 1; i <= 3; i++){
-    //n sei se pode fazer isso no arduino, vamos testar.
-    // digitalWrite('LED' + i,HIGH);
-     //val = digitalRead(SENSOR);
-     if(val == HIGH){
-     // digitalWrite('LED' + i,LOW);
-    return i;
+void calibrar(){
+  int botao = 1023;
+    lcd.setCursor(0,1); 
+    lcd.print("medir branco");
+    while(botao < 831){
+      botao = analogRead(0);
     }
-   // digitalWrite('LED' + i,LOW);
+    //podemos fazer com q a função ident_cor() faça essa parte tbm
+    ident_cor();
+    calibragem = 1;
+    //
+    botao = 1023;        
+    lcd.setCursor(0,1); 
+    lcd.print("medir preto");
+    while(botao < 831){
+      botao = analogRead(0);
+    }
+    ident_cor();
+    calibragem = 2;
+}
+
+void ident_cor(){
+  int num_vezes = 10;
+  int leds[3];
+  leds[0] = LEDR;
+  leds[1] = LEDG;
+  leds[2] = LEDB;
+  
+  for(int i = 0; i < 3; i++){
+    digitalWrite(leds[i], LOW);
+    for(int j = 0; j < num_vezes;j++ )
+    {
+       rgbNovo[i] += digitalRead(SENSOR);
+    }
+     rgbNovo[i] =  rgbNovo[i]/num_vezes;
+    digitalWrite(leds[i], HIGH);
+    if(calibragem == 2){
+      float difBp = rgbBranco[i] - rgbPreto[i];
+      rgbNovo[i] = (rgbNovo[i] - rgbPreto[i])/(difBp)*255;
+    }
+    else if(calibragem == 1){
+      rgbPreto[i] = rgbNovo[i];
+    }
+    else{
+      rgbBranco[i] = rgbNovo[i];
+    }
   }
-  return 0;   
+
+ 
 }
 void girar(int n){
     motor2->setSpeed(150);
@@ -120,9 +163,35 @@ void agir(int t){
     break;
   case 4:
     //identificação de cor
-    //preciso entender melhor como funciona
-    int tmps; 
-    tmps = ident_cor();
+    if(calibragem == 0){
+      //calibrar();
+    }
+    lcd.clear();
+    lcd.setCursor(0,1); 
+    lcd.print("medir novo");
+    int botao_in;
+    botao_in = 1023;
+    while(botao_in < 831){
+      botao_in = analogRead(0);
+      delay(250);
+    }
+    ident_cor();
+    //
+    char text1[17];
+    lcd.setCursor(0,0);
+    sprintf(text1, "R: %d", rgbNovo[0]);
+    lcd.print(text1);
+    char text2[17];
+    lcd.setCursor(0,1);
+    sprintf(text2, "G: %d B: %d ",rgbNovo[1],rgbNovo[2]);
+    lcd.print(text2);
+      
+    
+
+
+
+    /**8int tmps; 
+    //tmps = ident_cor();
     lcd.clear();
     lcd.setCursor(0,1);  
     switch(tmps){
@@ -137,7 +206,7 @@ void agir(int t){
         break;
       default:
         lcd.print("N identificado");      
-    }
+    }**/
     break;
 
   case 5:
@@ -148,7 +217,8 @@ void agir(int t){
       motor2->run(FORWARD);
     while((millis()- tempo)< 10000){
       
-      int tmp = ident_cor();
+      //int tmp = ident_cor();
+      int tmp;
       if(tmp == 1){
         //vermelho
         //pare e dê um giro de 360 graus
@@ -226,8 +296,8 @@ void start_menu(){
   //ficar atento q sempre vai dar zero, repensar - sempre na direita
   int botao = 1023;
   botao = analogRead(0);
-  delay(250);
-    if ((botao < 49)) {  
+   delay(250);
+    if ((botao <49)) {  
     //lcd.print ("Direita  ");
         motor1->setSpeed(255);
     motor1->run(FORWARD);
@@ -265,7 +335,7 @@ void loop() {
   start_menu();
   //digitalWrite(LED1,LOW);
   //delay();
-  digitalWrite(LED1,HIGH);
+//  digitalWrite(LED1,HIGH);
    //delay(1000);
 
     
