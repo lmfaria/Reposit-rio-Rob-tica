@@ -12,10 +12,10 @@ Adafruit_DCMotor *motor1 = AFMS.getMotor(1);
 Adafruit_DCMotor *motor2 = AFMS.getMotor(2);
 //Adafruit_DCMotor *motor3 = AFMS.getMotor(3);
 //Adafruit_DCMotor *motor4 = AFMS.getMotor(4);
-
+int numb = 0;
 int menu = 0;
 #define MAXN 5
-#define LED1 1
+#define LED1 25
 #define LED2 2
 #define LED3 3
 #define SENSOR 4
@@ -40,7 +40,7 @@ int ident_cor(){
   for(int i = 1; i <= 3; i++){
     //n sei se pode fazer isso no arduino, vamos testar.
     // digitalWrite('LED' + i,HIGH);
-     val = digitalRead(SENSOR);
+     //val = digitalRead(SENSOR);
      if(val == HIGH){
      // digitalWrite('LED' + i,LOW);
     return i;
@@ -49,7 +49,14 @@ int ident_cor(){
   }
   return 0;   
 }
-
+void girar(int n){
+    motor2->setSpeed(150);
+    motor2->run(FORWARD);
+    int tempo = 725;
+    tempo = tempo * n;  
+    delay(tempo);
+    motor2->run(RELEASE);
+}
 void agir(int t){
  // fazer um loop para pausa.
  lcd.setCursor(0,0);
@@ -79,46 +86,37 @@ void agir(int t){
     //substituir valores
     delay(13000);
     //virar para a direita 90 graus
-    motor2->setSpeed(255);
-    motor2->run(FORWARD);
-    delay(1275);
-    motor2->run(RELEASE);
+    numb = 2;
+    girar(numb);
     
     //parando de virar
     motor1->run(FORWARD);
     delay(13000);
     motor1->run(RELEASE);
-    
+    numb = 3;
     //virar direita 135 graus
-    motor2->run(FORWARD);
-    delay(1450);
-    motor2->run(RELEASE);
+    girar(numb);
 
     //parar de virar
     motor1->run(FORWARD);
     // delay do tempo para fazer 30cm vezes raiz de 2
     delay(18385);
     motor1->run(RELEASE);
-    motor2->run(FORWARD);
-    delay(1450);
-    motor2->run(RELEASE);
-
+    girar(numb);
     break;
 
   case 3:
+    //quadrado
+    numb = 2;
         motor1->setSpeed(255);
-        motor2->setSpeed(150);
     for(int i = 0; i < 4; i++){
       //fazer o quadrado  
       motor1->run(FORWARD);
       delay(13000);
       motor1->run(RELEASE);
-      motor2->run(FORWARD);
-      //substituir valores
-      delay(1275);
-      motor2->run(RELEASE);
+      girar(numb);
 
-    }
+    } 
     break;
   case 4:
     //identificação de cor
@@ -251,7 +249,7 @@ void start_menu(){
 
     //lcd.print ("Esquerda");
     //Parar
-          motor2->setSpeed(255);
+          motor2->setSpeed(150);
     motor2->run(FORWARD);
 
 
@@ -265,5 +263,12 @@ void start_menu(){
 
 void loop() {
   start_menu();
+  //digitalWrite(LED1,LOW);
+  //delay();
+  digitalWrite(LED1,HIGH);
+   //delay(1000);
+
+    
+  
 
 }
