@@ -1,8 +1,6 @@
 #include <Adafruit_MotorShield.h>
-#include <LiquidCrystal.h>  
-  
-LiquidCrystal lcd(8, 9, 4, 5, 6, 7);  
-  
+#include <LiquidCrystal.h>
+LiquidCrystal lcd(8, 9, 4, 5, 6, 7);
 
 // Create the motor shield object with the default I2C address
 Adafruit_MotorShield AFMS = Adafruit_MotorShield(); 
@@ -15,9 +13,9 @@ Adafruit_DCMotor *motor2 = AFMS.getMotor(2);
 int numb = 0;
 int menu = 0;
 int calibragem = 0; //0 = n foi feito calibragem 1 = calibrou o branco 2 = calibrou o preto
-float rgbNovo[] = {0,0,0};
-float rgbBranco[] = {0,0,0};
-float rgbPreto[] = {0,0,0};
+int rgbNovo[] = {0,0,0};
+int rgbBranco[] = {0,0,0};
+int rgbPreto[] = {0,0,0};
 
 #define MAXN 5
 #define LEDG 25
@@ -35,32 +33,51 @@ AFMS.begin(); // create with the default frequency 1.6KHz
   pinMode(LEDG,OUTPUT); //LED verde
   pinMode(LEDB,OUTPUT); //LED azul
   pinMode(SENSOR,INPUT);  //Sensor
-  digitalWrite(LEDR, HIGH);
+  digitalWrite(LEDR, HIGH);  
   digitalWrite(LEDG, HIGH);
   digitalWrite(LEDB, HIGH);
+  digitalWrite(LEDR, LOW);
+    delay(1000);
+  digitalWrite(LEDR, HIGH);   
 
     
 
 }
+void print_rgb(){
+    lcd.clear();
+      char text1[17];
+    lcd.setCursor(0,0);
+    sprintf(text1, "R: %d", rgbNovo[0]);
+    lcd.print(text1);
+    char text2[17];
+    lcd.setCursor(0,1);
+    sprintf(text2, "G: %d B: %d ",rgbNovo[1],rgbNovo[2]);
+    lcd.print(text2);
+}
+
 void calibrar(){
   int botao = 1023;
     lcd.setCursor(0,1); 
     lcd.print("medir branco");
-    while(botao < 831){
+    while(botao > 831){
+      delay(250);
       botao = analogRead(0);
     }
     //podemos fazer com q a função ident_cor() faça essa parte tbm
     ident_cor();
     calibragem = 1;
+    delay(5000);
     //
     botao = 1023;        
     lcd.setCursor(0,1); 
     lcd.print("medir preto");
-    while(botao < 831){
+    while(botao > 831){
+      delay(250);
       botao = analogRead(0);
     }
     ident_cor();
     calibragem = 2;
+    delay(5000);
 }
 
 void ident_cor(){
@@ -69,12 +86,17 @@ void ident_cor(){
   leds[0] = LEDR;
   leds[1] = LEDG;
   leds[2] = LEDB;
+  rgbNovo[0] = 0;  
+  rgbNovo[1] = 0;  
+  rgbNovo[2] = 0;  
   
   for(int i = 0; i < 3; i++){
     digitalWrite(leds[i], LOW);
+      
     for(int j = 0; j < num_vezes;j++ )
     {
-       rgbNovo[i] += digitalRead(SENSOR);
+       delay(250);
+       rgbNovo[i] += analogRead(SENSOR);
     }
      rgbNovo[i] =  rgbNovo[i]/num_vezes;
     digitalWrite(leds[i], HIGH);
@@ -89,6 +111,7 @@ void ident_cor(){
       rgbBranco[i] = rgbNovo[i];
     }
   }
+  print_rgb();
 
  
 }
@@ -164,28 +187,21 @@ void agir(int t){
   case 4:
     //identificação de cor
     if(calibragem == 0){
-      //calibrar();
+      calibrar();
     }
     lcd.clear();
     lcd.setCursor(0,1); 
     lcd.print("medir novo");
     int botao_in;
     botao_in = 1023;
-    while(botao_in < 831){
-      botao_in = analogRead(0);
+    while(botao_in > 831){
       delay(250);
+      botao_in = analogRead(0);
+
     }
     ident_cor();
     //
-    char text1[17];
-    lcd.setCursor(0,0);
-    sprintf(text1, "R: %d", rgbNovo[0]);
-    lcd.print(text1);
-    char text2[17];
-    lcd.setCursor(0,1);
-    sprintf(text2, "G: %d B: %d ",rgbNovo[1],rgbNovo[2]);
-    lcd.print(text2);
-      
+    print_rgb();
     
 
 
@@ -342,3 +358,4 @@ void loop() {
   
 
 }
+
