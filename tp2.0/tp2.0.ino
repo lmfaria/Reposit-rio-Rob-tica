@@ -73,6 +73,14 @@ int get_color() {
       } else {
         return GREEN;
       }
+    } else {
+      // preto ou erro max_color == RED
+      percentual = (float) rgbNovo[GREEN] / (float) rgbNovo[RED];
+      if (percentual > 0.7) {
+        return BLACK;
+      } else {
+        return NOT_IDENTIFIED;
+      }
     }
   }
   return NOT_IDENTIFIED;
@@ -283,9 +291,8 @@ void agir(int t){
       }
     }
     
-    
     print_rgb();
-//    delay(5000); para ver os valores RGB
+    delay(5000); 
     print_color();
 
 
