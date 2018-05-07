@@ -22,7 +22,87 @@ int rgbPreto[] = {0,0,0};
 #define LEDR 23
 #define LEDB 27
 #define SENSOR 12
+#define RED 0
+#define GREEN 1
+#define BLUE 2
+#define YELLOW 3
+#define BLACK 4
+#define NOT_IDENTIFIED 5
 
+
+int get_color() {
+  int max = -1023;
+  int max_cor = 0;
+  float percentual;
+
+  for (int i = 0; i<3; i++) {
+    if (rgbNovo[i] > max) {
+      max = rgbNovo[i];
+      max_cor = i;
+    }
+  }
+
+  if (rgbNovo[BLUE] > 200) {
+    //Está lendo mesa provavelmente
+    return NOT_IDENTIFIED;
+  }
+
+  if (rgbNovo[RED] > 100) {
+    //vermelho ou amarelo
+    percentual = (float) rgbNovo[GREEN] / (float) rgbNovo[RED];
+    if (percentual > 0.7) {
+      return YELLOW;
+    } else {
+      return RED;
+    }
+  } else {
+    //preto, azul, verde
+    if (max_cor == BLUE) {
+      //preto ou azul
+      percentual = (float) rgbNovo[RED] / (float) rgbNovo[BLUE];
+      if (percentual > 0.2) {
+        return BLACK;
+      } else {
+        return BLUE;
+      }
+    } else if (max_cor == GREEN) {
+      //verde ou preto
+      percentual = (float) rgbNovo[RED] / (float) rgbNovo[GREEN];
+      if (percentual > 0.6) {
+        return BLACK;
+      } else {
+        return GREEN;
+      }
+    }
+  }
+  return NOT_IDENTIFIED;
+}
+
+void print_color() {
+  int cor = get_color();
+  lcd.clear();
+  lcd.setCursor(0,0);
+  switch (cor) {
+    case RED:
+      lcd.print("-- VERMELHO --");
+      break;
+    case GREEN:
+      lcd.print("-- VERDE --");
+      break;
+    case BLUE:
+      lcd.print("-- AZUL --");
+      break;
+    case YELLOW:
+      lcd.print("-- AMARELO --");
+      break;
+    case BLACK:
+      lcd.print("-- PRETO? --");
+      break;
+    case NOT_IDENTIFIED:
+      lcd.print("-- ERRO --");
+      break;
+  }
+}
 
 void setup() {
 AFMS.begin(); // create with the default frequency 1.6KHz
@@ -60,7 +140,7 @@ void calibrar(){
     lcd.setCursor(0,1); 
     lcd.print("medir branco");
     while(botao > 831){
-      delay(250);
+      delay(100);
       botao = analogRead(0);
     }
     //podemos fazer com q a função ident_cor() faça essa parte tbm
@@ -72,12 +152,11 @@ void calibrar(){
     lcd.setCursor(0,1); 
     lcd.print("medir preto");
     while(botao > 831){
-      delay(250);
+      delay(100);
       botao = analogRead(0);
     }
     ident_cor();
     calibragem = 2;
-    delay(5000);
 }
 
 void ident_cor(){
@@ -95,7 +174,7 @@ void ident_cor(){
       
     for(int j = 0; j < num_vezes;j++ )
     {
-       delay(250);
+       delay(100);
        rgbNovo[i] += analogRead(SENSOR);
     }
      rgbNovo[i] =  rgbNovo[i]/num_vezes;
@@ -112,8 +191,6 @@ void ident_cor(){
     }
   }
   print_rgb();
-
- 
 }
 void girar(int n){
     motor2->setSpeed(150);
@@ -193,16 +270,23 @@ void agir(int t){
     lcd.setCursor(0,1); 
     lcd.print("medir novo");
     int botao_in;
-    botao_in = 1023;
-    while(botao_in > 831){
-      delay(250);
-      botao_in = analogRead(0);
+    do {
+      botao_in = analogRead(0);  
+    } while (botao_in > 831 || botao_in < 523);
 
-    }
     ident_cor();
-    //
-    print_rgb();
+    for (int i = 0; i < 3; i++) {
+      if(get_color() == NOT_IDENTIFIED) {
+        ident_cor();  
+      } else {
+        break;
+      }
+    }
     
+    
+    print_rgb();
+//    delay(5000); para ver os valores RGB
+    print_color();
 
 
 
@@ -353,9 +437,5 @@ void loop() {
   //delay();
 //  digitalWrite(LED1,HIGH);
    //delay(1000);
-
-    
-  
-
 }
 
