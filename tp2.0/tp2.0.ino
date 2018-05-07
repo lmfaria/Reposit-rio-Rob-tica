@@ -29,6 +29,10 @@ int rgbPreto[] = {0,0,0};
 #define BLACK 4
 #define NOT_IDENTIFIED 5
 
+void liberar(){
+    motor1->setSpeed(255);
+    motor1->run(BACKWARD);
+}
 
 int get_color() {
   int max = -1023;
@@ -311,29 +315,63 @@ void agir(int t){
 
   case 5:
     int tempo = millis();
-    motor1->setSpeed(150);
-      motor1->run(FORWARD);
-      motor2->setSpeed(150);
-      motor2->run(FORWARD);
+
     while((millis()- tempo)< 10000){
-      
+      while(get_color() == NOT_IDENTIFIED){
+        motor1->setSpeed(255);
+        motor1->run(FORWARD);
+      }
+      motor1->run(RELEASE);
+      int cor;  
+     
+      //ATENÇÃO
+       // criar um limite de tempo q ele fica procurando o bloco e conta qnts vezes continua sem identificar 
+     /** while(cor == NOT_IDENTIFIED){
+      delay(150);
+      cor = get_color()
+      }**/
+      liberar();
+      int numb = 0;    
       //int tmp = ident_cor();
-      int tmp;
-      if(tmp == 1){
+      if(cor == RED){
+        
         //vermelho
         //pare e dê um giro de 360 graus
+        motor1->run(RELEASE);
+        numb = 8;
+        girar(numb);
+        
       }
-      else if(tmp == 2){
+      else if(cor == GREEN){
         //verde
         //vire à esquerda 90 graus e ande para frente;
+        motor1->run(RELEASE);
+            motor2->setSpeed(150);
+        motor2->run(BACKWARD);
+
+        delay(1450);
+        motor2->run(RELEASE);
+         motor1->run(FORWARD);
       }
-      else if(tmp == 3){
+      else if(cor == BLUE){
         //Azul
         //vire à direita 90 graus e ande para frente;
+                
+        motor1->run(RELEASE);
+        numb = 2;
+        girar(numb);
+        motor1->run(FORWARD);
+        
+
       }  
-      else if(tmp == 4){
-        //Amarelo - tem q implementar
+      else if(cor == YELLOW){
+        //Amarelo 
         //gire 180 graus e ande para frente;
+        motor1->run(RELEASE);
+        numb = 4;
+        girar(numb);
+        motor1->run(FORWARD);
+        
       }        
                   
     }
