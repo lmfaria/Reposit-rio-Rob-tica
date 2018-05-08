@@ -4,18 +4,11 @@ LiquidCrystal lcd(8, 9, 4, 5, 6, 7);
 
 // Create the motor shield object with the default I2C address
 Adafruit_MotorShield AFMS = Adafruit_MotorShield(); 
-
 Adafruit_DCMotor *motor1 = AFMS.getMotor(1);
-
 Adafruit_DCMotor *motor2 = AFMS.getMotor(2);
 //Adafruit_DCMotor *motor3 = AFMS.getMotor(3);
 //Adafruit_DCMotor *motor4 = AFMS.getMotor(4);
-int numb = 0;
-int menu = 0;
-int calibragem = 0; //0 = n foi feito calibragem 1 = calibrou o branco 2 = calibrou o preto
-int rgbNovo[] = {0,0,0};
-int rgbBranco[] = {0,0,0};
-int rgbPreto[] = {0,0,0};
+
 
 #define MAXN 5
 #define LEDG 25
@@ -28,6 +21,145 @@ int rgbPreto[] = {0,0,0};
 #define YELLOW 3
 #define BLACK 4
 #define NOT_IDENTIFIED 5
+#define RIGHT 0
+#define UP 1
+#define DOWN 2
+#define LEFT 3
+#define SELECT 4
+#define NO_BUTTON 5
+
+
+int numb = 0;
+int menu = 0;
+int calibragem = 0; //0 = n foi feito calibragem 1 = calibrou o branco 2 = calibrou o preto
+int rgbNovo[] = {0,0,0};
+int rgbBranco[] = {255,255,255};
+int rgbPreto[] = {0,0,0};
+int buttons_threshold[] = {49, 175, 331, 523, 831};
+int leds[] = {LEDR, LEDG, LEDB};
+
+void turn_leds_off() {
+  for (int i = RED; i<=BLUE; i++) {
+    digitalWrite(leds[i], HIGH); //desliga
+  }
+}
+
+void turn_on_led(int led) {
+  //desliga todos os leds e acende só o que foi pedido
+  turn_leds_off();
+  digitalWrite(leds[led], LOW); // liga
+}
+
+int avg(int *arr, int size) {
+  int sum = 0;
+  for(int i=0; i<size; i++) {
+    sum += arr[i];
+  }
+  return sum/size;
+}
+
+
+void wait_for_bloco() {
+  int medicoes = 10;
+  int sensor_values[medicoes];
+  int tempo;
+  int i;
+  int media;
+  int estado = 0; // 0 = mesa, 1 = suspeita de bloco. 2 = bloco
+  char text[50];
+  int led_on = GREEN;
+
+  turn_on_led(led_on);
+  
+  // leitura inicial antes de começar a andar
+  lcd.clear();
+  lcd.setCursor(0, 0);
+  lcd.print("Leitura inicial...");
+  for (int i=0; i<medicoes; i++) {
+    sensor_values[i] = (float)(analogRead(SENSOR) - rgbPreto[led_on])/ ((float)(rgbBranco[led_on] - rgbPreto[led_on]))*255;
+    sprintf(text, "G: %d", sensor_values[i]);
+    lcd.setCursor(0, 1);
+    lcd.print(text);
+    delay(100);
+  }
+
+  delay(1000);
+  lcd.setCursor(0, 0);
+  lcd.print("Buscando bloco...");
+
+  motor1->setSpeed(255);
+  motor1->run(FORWARD);
+  
+  // loop para buscar o bloco
+  tempo = millis();
+  i = 0;
+  do {
+    sensor_values[i] = (float)(analogRead(SENSOR) - rgbPreto[led_on])/ ((float)(rgbBranco[led_on] - rgbPreto[led_on]))*255;
+    i = (i + 1) % medicoes;
+    media = avg(sensor_values, medicoes);
+    lcd.setCursor(0,1);
+    sprintf(text, "Media: %d       ", media);
+    lcd.print(text);
+    if(media < 255) {
+      if (estado == 0) {
+        // leitura no verde parou de estourar, confirmar com leitura no azul
+        motor1->run(RELEASE);
+        lcd.setCursor(0, 1);
+        lcd.print("Confirmando...");
+        turn_on_led(BLUE);
+        led_on = BLUE;
+        for(int j=0; j<medicoes; j++) {
+          sensor_values[j] = (float)(analogRead(SENSOR) - rgbPreto[led_on])/ ((float)(rgbBranco[led_on] - rgbPreto[led_on]))*255;
+          delay(100);
+        }
+        motor1->run(FORWARD);
+        estado = 1;
+      } else {
+        motor1->run(RELEASE);
+        delay(1000);
+        lcd.setCursor(0, 1);
+        lcd.print("Bloco encontrado");
+        delay(1000);
+        break;
+      }
+    }
+  } while (true);
+
+  
+}
+
+int get_pressed_button() {
+  int value;
+  int pressed_button = NO_BUTTON;
+  
+  value = analogRead(0);
+  for (int i = RIGHT; i < NO_BUTTON; i++) {
+    if (value < buttons_threshold[i]) {
+      pressed_button = i;
+      break;  
+    }
+  }
+  return pressed_button;
+}
+
+void button_release() {
+  int button;
+  do {
+    button = get_pressed_button();
+  } while(button != NO_BUTTON);
+}
+
+
+
+void wait_for_button(int button) {
+  int value;
+  int pressed_button;
+
+  do {
+    pressed_button = get_pressed_button();
+  } while (pressed_button != button);
+  
+}
 
 void liberar(){
     motor1->setSpeed(255);
@@ -79,8 +211,7 @@ int get_color() {
       }
     } else {
       // preto ou erro max_color == RED
-      percentual = (float) rgbNovo[GREEN] / (float) rgbNovo[RED];
-      if (percentual > 0.7) {
+      if (rgbNovo[RED] < 50) {
         return BLACK;
       } else {
         return NOT_IDENTIFIED;
@@ -108,7 +239,7 @@ void print_color() {
       lcd.print("-- AMARELO --");
       break;
     case BLACK:
-      lcd.print("-- PRETO? --");
+      lcd.print("-- PRETO --");
       break;
     case NOT_IDENTIFIED:
       lcd.print("-- ERRO --");
@@ -117,82 +248,68 @@ void print_color() {
 }
 
 void setup() {
-AFMS.begin(); // create with the default frequency 1.6KHz
- lcd.begin(16, 2);  
-  lcd.setCursor(0,0);  
-  lcd.print("BH Dynamics: ");
+  AFMS.begin(); // create with the default frequency 1.6KHz
+  lcd.begin(16, 2);  
+  lcd.setCursor(0,0);
+  lcd.clear();
   pinMode(LEDR,OUTPUT); //LED vermelho
   pinMode(LEDG,OUTPUT); //LED verde
   pinMode(LEDB,OUTPUT); //LED azul
   pinMode(SENSOR,INPUT);  //Sensor
-  digitalWrite(LEDR, HIGH);  
-  digitalWrite(LEDG, HIGH);
-  digitalWrite(LEDB, HIGH);
-  digitalWrite(LEDR, LOW);
-    delay(1000);
-  digitalWrite(LEDR, HIGH);   
-
-    
-
+  for(int i=RED; i<=BLUE; i++) {
+    turn_on_led(i);
+    delay(500);
+  }
+  turn_leds_off();
+  lcd.print("BH Dynamics: ");
 }
+
 void print_rgb(){
-    lcd.clear();
-      char text1[17];
-    lcd.setCursor(0,0);
-    sprintf(text1, "R: %d", rgbNovo[0]);
-    lcd.print(text1);
-    char text2[17];
+    char text1[50];
     lcd.setCursor(0,1);
-    sprintf(text2, "G: %d B: %d ",rgbNovo[1],rgbNovo[2]);
-    lcd.print(text2);
+    sprintf(text1, "R:%d G:%d B:%d\0",rgbNovo[RED], rgbNovo[GREEN],rgbNovo[BLUE]);
+    lcd.print(text1);
 }
 
 void calibrar(){
-  int botao = 1023;
-    lcd.setCursor(0,1); 
-    lcd.print("medir branco");
-    while(botao > 831){
-      delay(100);
-      botao = analogRead(0);
-    }
-    //podemos fazer com q a função ident_cor() faça essa parte tbm
-    ident_cor(20);
-    calibragem = 1;
-    delay(5000);
-    //
-    botao = 1023;        
-    lcd.setCursor(0,1); 
-    lcd.print("medir preto");
-    while(botao > 831){
-      delay(100);
-      botao = analogRead(0);
-    }
-    ident_cor(20);
-    calibragem = 2;
+  lcd.clear();
+  lcd.setCursor(0,0); 
+  lcd.print("Medir branco");
+  wait_for_button(SELECT);
+
+  //podemos fazer com q a função ident_cor() faça essa parte tbm
+  lcd.setCursor(0,1);
+  lcd.print("Medindo...");
+  ident_cor(20);
+  calibragem = 1;
+
+  lcd.clear();
+  lcd.setCursor(0,0); 
+  lcd.print("Medir preto");
+  wait_for_button(SELECT);
+  lcd.setCursor(0,1);
+  lcd.print("Medindo...");
+  ident_cor(20);
+  calibragem = 2;
 }
 
 void ident_cor(int num_vezes){
-  int leds[3];
-  leds[0] = LEDR;
-  leds[1] = LEDG;
-  leds[2] = LEDB;
   rgbNovo[0] = 0;  
   rgbNovo[1] = 0;  
   rgbNovo[2] = 0;  
   
-  for(int i = 0; i < 3; i++){
+  for(int i = 0; i < 3; i++) {
     digitalWrite(leds[i], LOW);
       
-    for(int j = 0; j < num_vezes;j++ )
-    {
+    for(int j = 0; j < num_vezes;j++ ) {
        delay(100);
        rgbNovo[i] += analogRead(SENSOR);
     }
-     rgbNovo[i] =  rgbNovo[i]/num_vezes;
+    rgbNovo[i] =  rgbNovo[i]/num_vezes;
     digitalWrite(leds[i], HIGH);
     if(calibragem == 2){
       float difBp = rgbBranco[i] - rgbPreto[i];
-      rgbNovo[i] = (rgbNovo[i] - rgbPreto[i])/(difBp)*255;
+      rgbNovo[i] = (rgbNovo[i] - rgbPreto[i])/ (difBp)*255;
     }
     else if(calibragem == 1){
       rgbPreto[i] = rgbNovo[i];
@@ -201,9 +318,10 @@ void ident_cor(int num_vezes){
       rgbBranco[i] = rgbNovo[i];
     }
   }
-  print_rgb();
 }
-void girar(int n){
+
+void girar(int n) {
+    // angulo = 45 * n
     motor2->setSpeed(150);
     motor2->run(FORWARD);
     int tempo = 725;
@@ -211,11 +329,12 @@ void girar(int n){
     delay(tempo);
     motor2->run(RELEASE);
 }
+
 void agir(int t){
  // fazer um loop para pausa.
- lcd.setCursor(0,0);
- lcd.print("Executando: ");
- switch(t){
+  lcd.setCursor(0,0);
+  lcd.print("Executando: ");
+  switch(t) {
   case 1:
     //andar para frente
     // Nao sei como os motores estão organizados
@@ -278,13 +397,14 @@ void agir(int t){
       calibrar();
     }
     lcd.clear();
-    lcd.setCursor(0,1); 
-    lcd.print("medir novo");
+    lcd.setCursor(0,0); 
+    lcd.print("Medir novo");
     int botao_in;
     do {
-      botao_in = analogRead(0);  
-    } while (botao_in > 831 || botao_in < 523);
-
+      botao_in = get_pressed_button();
+    } while (botao_in != SELECT);
+    lcd.setCursor(0,1);
+    lcd.print("Medindo...");
     ident_cor(10);
     for (int i = 0; i < 3; i++) {
       if(get_color() == NOT_IDENTIFIED) {
@@ -294,9 +414,8 @@ void agir(int t){
       }
     }
     
-    print_rgb();
-    delay(5000); 
     print_color();
+    print_rgb();
 
 
 
@@ -320,71 +439,56 @@ void agir(int t){
     break;
 
   case 5:
-    int tempo;
-    ident_cor(3);
+    int cor;
+    wait_for_bloco();
+    ident_cor(10);
     print_color();
-    tempo = millis();
-    while(true){
-      while(get_color() == NOT_IDENTIFIED){
-        ident_cor(3);
-        print_color();
-        motor1->setSpeed(255);
-        motor1->run(FORWARD);
-      }
-     ident_cor(10);
-      motor1->run(RELEASE);
-      int cor = get_color();
-     
-      //ATENÇÃO
-       // criar um limite de tempo q ele fica procurando o bloco e conta qnts vezes continua sem identificar 
-     /** while(cor == NOT_IDENTIFIED){
-      delay(150);
-      cor = get_color()
-      }**/
-      liberar();
-      int numb = 0;    
-      //int tmp = ident_cor();
-      if(cor == RED){
-        
-        //vermelho
-        //pare e dê um giro de 360 graus
-        motor1->run(RELEASE);
-        numb = 8;
-        girar(numb);
-        
-      }
-      else if(cor == GREEN){
-        //verde
-        //vire à esquerda 90 graus e ande para frente;
-        motor1->run(RELEASE);
-        motor2->setSpeed(150);
-        motor2->run(BACKWARD);
-        delay(1450);
-        motor2->run(RELEASE);
-        motor1->run(FORWARD);
-      }
-      else if(cor == BLUE){
-        //Azul
-        //vire à direita 90 graus e ande para frente;
-                
-        motor1->run(RELEASE);
-        numb = 2;
-        girar(numb);
-        motor1->run(FORWARD);
-        
-
-      }  
-      else if(cor == YELLOW){
-        //Amarelo 
-        //gire 180 graus e ande para frente;
-        motor1->run(RELEASE);
-        numb = 4;
-        girar(numb);
-        motor1->run(FORWARD);
-        
-      }        
+    print_rgb();
+    delay(5000);
+   
+    
+    cor = get_color();
+//
+//    if(cor == RED){
+//      
+//      //vermelho
+//      //pare e dê um giro de 360 graus
+//      motor1->run(RELEASE);
+//      numb = 8;
+//      girar(numb);
+//      
+//    }
+//    else if(cor == GREEN){
+//      //verde
+//      //vire à esquerda 90 graus e ande para frente;
+//      motor1->run(RELEASE);
+//      motor2->setSpeed(150);
+//      motor2->run(BACKWARD);
+//      delay(1450);
+//      motor2->run(RELEASE);
+//      motor1->run(FORWARD);
+//    }
+//    else if(cor == BLUE){
+//      //Azul
+//      //vire à direita 90 graus e ande para frente;
+//              
+//      motor1->run(RELEASE);
+//      numb = 2;
+//      girar(numb);
+//      motor1->run(FORWARD);
+//      
+//
+//    }  
+//    else if(cor == YELLOW){
+//      //Amarelo 
+//      //gire 180 graus e ande para frente;
+//      motor1->run(RELEASE);
+//      numb = 4;
+//      girar(numb);
+//      motor1->run(FORWARD);
+//      
+//    }        
                   
-    }
       motor1->run(RELEASE);
       motor2->run(RELEASE);   
  }
@@ -441,49 +545,39 @@ void mudar_menu(int n){
   display_menu(menu);   
 }
 void start_menu(){
-  //ficar atento q sempre vai dar zero, repensar - sempre na direita
-  int botao = 1023;
-  botao = analogRead(0);
-   delay(250);
-    if ((botao <49)) {  
-    //lcd.print ("Direita  ");
-        motor1->setSpeed(255);
-    motor1->run(FORWARD);
-    delay(2000);    
-    motor1->run(BACKWARD);
-    delay(2000);
+  int botao;
+  do {
+    botao = get_pressed_button();  
+  } while(botao == NO_BUTTON);
+  button_release();
+  
 
-    
-  }  
-  else if (botao < 175) {  
-    //lcd.print ("Cima    ");
-    mudar_menu(0);
-  }  
-  else if (botao < 331){  
-    //lcd.print ("Baixo    ");
-    mudar_menu(1);
-  }  
-  else if (botao < 523){  
-
-    //lcd.print ("Esquerda");
-    //Parar
-          motor2->setSpeed(150);
-    motor2->run(FORWARD);
-
-
-  }  
-  else if (botao < 831){  
-    //select
-    agir(menu);
-   } 
+  switch (botao) {
+    case RIGHT:
+      motor1->setSpeed(255);
+      motor1->run(FORWARD);
+      delay(2000);
+      motor1->run(BACKWARD);
+      delay(2000);
+      break;
+    case UP:
+      mudar_menu(0);
+      break;
+    case DOWN:
+      mudar_menu(1);
+      break;
+    case LEFT:
+      motor2->setSpeed(255);
+      motor2->run(FORWARD);
+      break;
+    case SELECT:
+      agir(menu);
+      break;
+  }
   
 }
 
 void loop() {
   start_menu();
-  //digitalWrite(LED1,LOW);
-  //delay();
-//  digitalWrite(LED1,HIGH);
-   //delay(1000);
 }
 
