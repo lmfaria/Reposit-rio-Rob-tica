@@ -103,9 +103,11 @@ void wait_for_bloco() {
     if(media < 255) {
       if (estado == 0) {
         // leitura no verde parou de estourar, confirmar com leitura no azul
-        motor1->run(RELEASE);
+        
         lcd.setCursor(0, 1);
         lcd.print("Confirmando...");
+        delay(500);
+        motor1->run(RELEASE);
         turn_on_led(BLUE);
         led_on = BLUE;
         for(int j=0; j<medicoes; j++) {
@@ -164,6 +166,9 @@ void wait_for_button(int button) {
 void liberar(){
     motor1->setSpeed(255);
     motor1->run(BACKWARD);
+    delay(750);
+    motor1->run(RELEASE);
+    
 }
 
 int get_color() {
@@ -440,55 +445,63 @@ void agir(int t){
 
   case 5:
     int cor;
-    wait_for_bloco();
-    ident_cor(10);
-    print_color();
-    print_rgb();
-    delay(5000);
-   
-    
-    cor = get_color();
-//
-//    if(cor == RED){
-//      
-//      //vermelho
-//      //pare e dê um giro de 360 graus
-//      motor1->run(RELEASE);
-//      numb = 8;
-//      girar(numb);
-//      
-//    }
-//    else if(cor == GREEN){
-//      //verde
-//      //vire à esquerda 90 graus e ande para frente;
-//      motor1->run(RELEASE);
-//      motor2->setSpeed(150);
-//      motor2->run(BACKWARD);
-//      delay(1450);
-//      motor2->run(RELEASE);
-//      motor1->run(FORWARD);
-//    }
-//    else if(cor == BLUE){
-//      //Azul
-//      //vire à direita 90 graus e ande para frente;
-//              
-//      motor1->run(RELEASE);
-//      numb = 2;
-//      girar(numb);
-//      motor1->run(FORWARD);
-//      
-//
-//    }  
-//    else if(cor == YELLOW){
-//      //Amarelo 
-//      //gire 180 graus e ande para frente;
-//      motor1->run(RELEASE);
-//      numb = 4;
-//      girar(numb);
-//      motor1->run(FORWARD);
-//      
-//    }        
-                  
+    while(true){
+      wait_for_bloco();
+      ident_cor(10);
+      print_color();
+      print_rgb();
+  
+     
+      liberar();
+      cor = get_color();
+      
+      if(cor == RED){
+       
+        //vermelho
+        //pare e dê um giro de 360 graus
+        motor1->run(RELEASE);
+        numb = 8;
+        girar(numb);
+        delay(3000);
+        break;
+      }
+      else if(cor == GREEN){
+        //verde
+        //vire à esquerda 90 graus e ande para frente;
+        motor1->run(RELEASE);
+        motor2->setSpeed(150);
+        motor2->run(BACKWARD);
+        delay(1450);
+        motor2->run(RELEASE);
+        motor1->run(FORWARD);
+        delay(3000);
+        break;
+      }
+      else if(cor == BLUE){
+        //Azul
+        //vire à direita 90 graus e ande para frente;
+                
+        motor1->run(RELEASE);
+        numb = 2;
+        girar(numb);
+        motor1->run(FORWARD);
+        delay(3000);
+        break;
+        
+  
+      }  
+      else if(cor == YELLOW){
+        //Amarelo 
+        //gire 180 graus e ande para frente;
+        motor1->run(RELEASE);
+        numb = 4;
+        girar(numb);
+        motor1->run(FORWARD);
+        delay(3000);
+        break;
+        
+      }        
+    }            
       motor1->run(RELEASE);
       motor2->run(RELEASE);   
  }
