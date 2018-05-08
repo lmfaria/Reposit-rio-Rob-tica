@@ -46,7 +46,7 @@ int get_color() {
     }
   }
 
-  if (rgbNovo[BLUE] > 200) {
+  if (rgbNovo[GREEN] > 255 && rgbNovo[BLUE] > 255) {
     //Está lendo mesa provavelmente
     return NOT_IDENTIFIED;
   }
@@ -148,7 +148,7 @@ void calibrar(){
       botao = analogRead(0);
     }
     //podemos fazer com q a função ident_cor() faça essa parte tbm
-    ident_cor();
+    ident_cor(20);
     calibragem = 1;
     delay(5000);
     //
@@ -159,12 +159,11 @@ void calibrar(){
       delay(100);
       botao = analogRead(0);
     }
-    ident_cor();
+    ident_cor(20);
     calibragem = 2;
 }
 
-void ident_cor(){
-  int num_vezes = 10;
+void ident_cor(int num_vezes){
   int leds[3];
   leds[0] = LEDR;
   leds[1] = LEDG;
@@ -278,10 +277,10 @@ void agir(int t){
       botao_in = analogRead(0);  
     } while (botao_in > 831 || botao_in < 523);
 
-    ident_cor();
+    ident_cor(10);
     for (int i = 0; i < 3; i++) {
       if(get_color() == NOT_IDENTIFIED) {
-        ident_cor();  
+        ident_cor(10);  
       } else {
         break;
       }
@@ -314,15 +313,20 @@ void agir(int t){
     break;
 
   case 5:
-    int tempo = millis();
-
-    while((millis()- tempo)< 10000){
+    int tempo;
+    ident_cor(3);
+    print_color();
+    tempo = millis();
+    while(true){
       while(get_color() == NOT_IDENTIFIED){
+        ident_cor(3);
+        print_color();
         motor1->setSpeed(255);
         motor1->run(FORWARD);
       }
+     ident_cor(10);
       motor1->run(RELEASE);
-      int cor;  
+      int cor = get_color();
      
       //ATENÇÃO
        // criar um limite de tempo q ele fica procurando o bloco e conta qnts vezes continua sem identificar 
@@ -346,12 +350,11 @@ void agir(int t){
         //verde
         //vire à esquerda 90 graus e ande para frente;
         motor1->run(RELEASE);
-            motor2->setSpeed(150);
+        motor2->setSpeed(150);
         motor2->run(BACKWARD);
-
         delay(1450);
         motor2->run(RELEASE);
-         motor1->run(FORWARD);
+        motor1->run(FORWARD);
       }
       else if(cor == BLUE){
         //Azul
