@@ -166,7 +166,7 @@ void wait_for_button(int button) {
 void liberar(){
     motor1->setSpeed(255);
     motor1->run(BACKWARD);
-    delay(750);
+    delay(1000);
     motor1->run(RELEASE);
     
 }
@@ -348,9 +348,9 @@ void agir(int t){
     motor1->run(FORWARD);
 
     //troque o delay pelo tempo necessário para fazer 30cm
-    delay(13000);
+    delay(12000);
     motor1->run(BACKWARD);
-    delay(12500);
+    delay(12000);
     motor1->run(RELEASE);
         
 
@@ -362,14 +362,14 @@ void agir(int t){
     motor1->run(FORWARD);
 
     //substituir valores
-    delay(13000);
+    delay(12000);
     //virar para a direita 90 graus
     numb = 2;
     girar(numb);
     
     //parando de virar
     motor1->run(FORWARD);
-    delay(13000);
+    delay(12000);
     motor1->run(RELEASE);
     numb = 3;
     //virar direita 135 graus
@@ -378,7 +378,7 @@ void agir(int t){
     //parar de virar
     motor1->run(FORWARD);
     // delay do tempo para fazer 30cm vezes raiz de 2
-    delay(18385);
+    delay(16970);
     motor1->run(RELEASE);
     girar(numb);
     break;
@@ -390,7 +390,7 @@ void agir(int t){
     for(int i = 0; i < 4; i++){
       //fazer o quadrado  
       motor1->run(FORWARD);
-      delay(13000);
+      delay(12000);
       motor1->run(RELEASE);
       girar(numb);
 
